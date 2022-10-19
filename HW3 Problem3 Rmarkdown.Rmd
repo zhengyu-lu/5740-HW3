@@ -1,0 +1,95 @@
+---
+title: "HW3 Problem 3"
+author: "Zhengyu Lu"
+date: '2022-10-18'
+output:
+  word_document: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+## HW2 Prohlem 3
+### (a) Create a binary variable, mpg01, that contains a 1 if mpg contains a value above its median, and a 0 if mpg contains a value below its median. You can compute the median using the median() function. Note you may find it helpful to use the data.frame() function to create a single data set containing both mpg01 and the other Auto variables.
+```{r}
+library(ISLR)
+library(MASS)
+library(e1071)
+attach(Auto)
+library(class)
+mpg01 <- ifelse( mpg > median(mpg), yes = 1, no = 0)
+Auto <- data.frame(mpg01,Auto)
+head(Auto)
+```
+
+### (b) Explore the data graphically in order to investigate the association between mpg01 and the other features. Which of the other features seem most likely to be useful in predicting mpg01? Scatterplots and boxplots may be useful tools to answer this question. Describe your findings.
+```{r}
+pairs(Auto)
+boxplot(cylinders ~ mpg01, data = Auto, main = "Cylinders vs mpg01")
+boxplot(displacement ~ mpg01, data = Auto, main = "Displacement vs mpg01")
+boxplot(horsepower ~ mpg01, data = Auto, main = "Horsepower vs mpg01")
+boxplot(weight ~ mpg01, data = Auto, main = "Weight vs mpg01")
+boxplot(acceleration ~ mpg01, data = Auto, main = "Acceleration vs mpg01")
+boxplot(year ~ mpg01, data = Auto, main = "Year vs mpg01")
+boxplot(origin ~ mpg01, data = Auto, main = "Origin vs mpg01")
+```
+As the figures show, cylinders, weight, displacement, horsepower seem most likely to be useful in predicting mpg01.
+Higer cylinders will have low mpg,higher weighr will have low mpg, higher displacement will have low mpg, higher horsepower will have low mpg.
+
+### (c) Split the data into a training set and a test set.
+```{r}
+index <- sort(sample(nrow(Auto), nrow(Auto)*.75))
+train <- Auto[index,]
+test <- Auto[-index,]
+```
+
+### (d) Perform LDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+lda.model <- lda(mpg01 ~ cylinders+displacement+horsepower+weight, data = train)
+lda.predict <-  predict(lda.model, test)
+table(lda.predict$class , test$mpg01)
+mean(lda.predict$class !=test$mpg01 )
+```
+
+### (e) Perform QDA on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained? 
+```{r}
+qda.model <- qda(mpg01 ~ cylinders+displacement+horsepower+weight, data = train)
+qda.predict <-  predict(qda.model, test)
+table(qda.predict$class , test$mpg01)
+mean(qda.predict$class !=test$mpg01 )
+```
+
+### (f) Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+glm.model <- glm(mpg01 ~ cylinders+displacement+horsepower+weight, data = train)
+glm.prob <-  predict(glm.model, test)
+glm.predict <- rep(0, length(glm.prob))
+glm.predict[glm.prob > .5] <- 1
+glm.predict
+table(glm.predict,test$mpg01)
+mean(glm.predict !=test$mpg01 )
+```
+
+### (g) Perform naive Bayes on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?
+```{r}
+nb.fit <- naiveBayes(mpg01 ~ cylinders+displacement+horsepower+weight, data = train)
+nb.predict <- predict(nb.fit, test)
+table(nb.predict,test$mpg01)
+mean(nb.predict!=test$mpg01 )
+```
+
+### (h) Perform KNN on the training data, with several values of K, in order to predict mpg01. Use only the variables that seemed most associated with mpg01 in (b). What test errors do you obtain? Which value of K seems to perform the best on this data set?
+```{r}
+train.X <-train[,c(3,4,5,6)]
+test.X <- test[,c(3,4,5,6)]
+train.mpg01 <-train$mpg01
+knn.predict <-  knn(train.X, test.X, train.mpg01, k = 1)
+mean(knn.predict!=test$mpg01 )
+
+testError <- rep(NA, 100)
+for (k in 1:100){
+  knn.pred <- knn(train.X, test.X, train.mpg01, k = k)
+  testError[k] <- mean(knn.pred!=test$mpg01)
+}
+testError
+which.min(testError)
+```
